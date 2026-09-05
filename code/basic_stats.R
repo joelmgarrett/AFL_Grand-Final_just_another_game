@@ -1,8 +1,8 @@
 #!/usr/bin/env Rscript
 # Reproduces every figure quoted in "Are AFL Grand Finals just another game, or
 # a different kettle of fish?" (The Conversation, 2026), in the order they
-# appear in the piece. Reads ../data/afl_grand_final_data.xlsx relative to this
-# script, regardless of where you run it from.
+# appear in the piece. Finds data/afl_grand_final_data.xlsx automatically
+# whether you run this via Rscript, source() it, or paste it into a console.
 #
 # Needs: readxl, dplyr
 #   install.packages(c("readxl", "dplyr"))
@@ -22,8 +22,23 @@ suppressPackageStartupMessages({
   library(dplyr)
 })
 
-this_dir <- dirname(normalizePath(sub("--file=", "", grep("--file=", commandArgs(), value = TRUE))))
-DATA <- file.path(this_dir, "..", "data", "afl_grand_final_data.xlsx")
+# Find the data file wherever you're running this from - the repo root
+# (Rscript code/basic_stats.R), from inside code/ itself, or pasted straight
+# into an R console or RStudio's Source button. No reliance on figuring out
+# where this script lives, which behaves differently across all of those.
+candidates <- c(
+  file.path("data", "afl_grand_final_data.xlsx"),          # working dir = repo root
+  file.path("..", "data", "afl_grand_final_data.xlsx"),    # working dir = code/
+  "afl_grand_final_data.xlsx"                               # data copied next to script
+)
+found <- candidates[file.exists(candidates)]
+if (length(found) == 0) {
+  stop('Could not find afl_grand_final_data.xlsx. Set your working directory ',
+       'to the repo root first, e.g. setwd("~/path/to/AFL_Grand-Final_just_another_game"), ',
+       'or in RStudio: Session > Set Working Directory > To Source File Location, ',
+       'then setwd("..").')
+}
+DATA <- found[1]
 
 ORDER <- c("Home & Away", "Elimination Final", "Qualifying Final",
            "Semi Final", "Preliminary Final", "Grand Final")
