@@ -38,6 +38,12 @@ def section(title):
 
 # ------------------------------------------------------------------------
 section("1. What actually changes in a final (2012-2025, all matches)")
+# NOTE ON METHOD: every percentage below is the average of each match's own
+# rate (mean of ratios), not one ratio computed from pooled season totals.
+# The two methods give very slightly different answers (contested possession
+# rate this way: 38.6% -> 40.9%; pooled, it is 38.4% -> 40.5%). Averaging each
+# match's own rate is used throughout so every percentage in the piece is
+# computed the same way.
 # "Teams average 347 disposals in a Grand Final against 361 in a home-and-away game"
 M = ["disposals", "kicks", "handballs", "uncontestedPossessions", "cp_rate",
      "marks", "uncontestedMarks", "contestedMarks", "disposalEfficiency"]
