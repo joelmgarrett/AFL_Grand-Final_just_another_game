@@ -7,13 +7,9 @@ We pulled the official statistics for every AFL match played since 2000 to see w
   games), plus quarter-by-quarter scores. Sourced from afl.com.au (2012 onward)
   and afltables.com (2000-2011, and all quarter scores). The first sheet
   explains the columns.
-- **`code/basic_stats.py`** and **`code/basic_stats.R`** - reproduce every
-  number quoted in the article, in the order they appear. Both read the same
-  data file and print identical numbers.
-  - Python: `pip install pandas openpyxl statsmodels`, then
-    `python code/basic_stats.py` from the repo root.
-  - R: `install.packages(c("readxl", "dplyr"))`, then
-    `Rscript code/basic_stats.R` from the repo root.
+- **`code/basic_stats.R`** - reproduces every number quoted in the article,
+  in the order they appear. Run `install.packages(c("readxl", "dplyr"))`,
+  then `Rscript code/basic_stats.R` from the repo root.
 
 This is a Conversation piece, not a study - a handful of counting stats used to
 spot a trend, not a controlled experiment. Treat it that way.

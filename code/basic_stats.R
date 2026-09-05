@@ -31,11 +31,12 @@ FINALS <- ORDER[-1]
 
 modern <- read_excel(DATA, sheet = "2012-2025 matches") %>%
   mutate(round_type = factor(round_type, levels = ORDER),
-         # one 2015 home-and-away match (Adelaide v Geelong) has a completely
-         # blank record in the AFL feed - disposals, possessions, everything
-         # zero. 0/0 here is undefined, not zero, so it becomes NA and every
-         # mean() below needs na.rm = TRUE to skip it (R does not do this by
-         # default the way pandas' mean() does)
+         # Round 14, 2015, Adelaide v Geelong shows zero for every stat. That
+         # match was never played - cancelled after the death of Adelaide
+         # coach Phil Walsh, with both sides awarded competition points
+         # instead. 0/0 here is undefined, not zero, so it becomes NA and
+         # every mean() below needs na.rm = TRUE to skip it (R does not do
+         # this by default the way pandas' mean() does)
          cp_rate = if_else(totalPossessions > 0,
                             100 * contestedPossessions / totalPossessions, NA_real_),
          uncontestedMarks = marks - contestedMarks)
