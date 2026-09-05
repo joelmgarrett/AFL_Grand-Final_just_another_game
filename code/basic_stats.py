@@ -22,6 +22,10 @@ FINALS = ORDER[1:]
 
 modern = pd.read_excel(DATA, sheet_name="2012-2025 matches")
 modern["round_type"] = pd.Categorical(modern.round_type, ORDER, ordered=True)
+# one 2015 home-and-away match (Adelaide v Geelong) has a completely blank
+# record in the AFL feed - disposals, possessions, everything, zero for both
+# teams. 0/0 is undefined, not zero, so this becomes NaN; pandas' mean()
+# skips NaN by default, which is what every average below relies on.
 modern["cp_rate"] = 100 * modern.contestedPossessions / modern.totalPossessions
 modern["uncontestedMarks"] = modern.marks - modern.contestedMarks
 
