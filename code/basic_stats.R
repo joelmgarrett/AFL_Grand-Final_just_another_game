@@ -108,12 +108,20 @@ print(as.data.frame(t2))
 
 # the article quotes tackles and contested possessions as both teams
 # combined for the whole game - "139 tackles and 291 contested
-# possessions... against 136 and 279 in Grand Finals" is this table
+# possessions... against 136 and 279 in Grand Finals" is this table.
+# cp_rate is NOT doubled here - it's already a percentage (contested
+# possessions as a share of all possessions), so it's the same figure
+# whether you're describing one team or the match as a whole; doubling a
+# percentage would just be wrong (40.9% x 2 = 81.8%, which means nothing).
 cat("\nboth teams combined, per match - this is what the article quotes:\n")
 t2b <- modern %>%
   group_by(round_type) %>%
   summarise(tackles = 2 * mean(tackles),
             contestedPossessions = 2 * mean(contestedPossessions),
+            cp_rate = mean(cp_rate, na.rm = TRUE),
+            # score doubled too - both teams' points added together, i.e.
+            # the total score of the match
+            score = 2 * mean(score),
             .groups = "drop") %>%
   mutate(across(where(is.numeric), ~round(., 1)))
 print(as.data.frame(t2b))
