@@ -91,7 +91,16 @@ print(as.data.frame(t1 %>% filter(round_type %in% c("Home & Away", "Grand Final"
 
 # --------------------------------------------------------------------------
 section("2. Which final is the hardest (2012-2025)")
-cat("per team, per match:\n")
+# per team, per game - already a proper average across every individual
+# match (56 team-rows for elimination finals: 2 games x 2 teams x 14
+# seasons; 28 for the Grand Final's 1 game x 2 teams x 14 seasons), so the
+# different number of games each round type plays per season is already
+# accounted for correctly.
+#
+# The article quotes tackles and contested possessions as both teams
+# combined ("139 tackles and 291 contested possessions... against 136 and
+# 279 in Grand Finals") - that is exactly double each number below, since a
+# match has two teams. 69.3 x 2 = 138.6 -> "139"; 145.7 x 2 = 291.4 -> "291".
 t2 <- modern %>%
   group_by(round_type) %>%
   summarise(tackles = mean(tackles), contestedPossessions = mean(contestedPossessions),
@@ -99,19 +108,6 @@ t2 <- modern %>%
             score = mean(score), .groups = "drop") %>%
   mutate(across(where(is.numeric), ~round(., 1)))
 print(as.data.frame(t2))
-
-# the article quotes tackles and contested possessions COMBINED (both teams
-# added together for the match), not the per-team average above - "139
-# tackles and 291 contested possessions... against 136 and 279 in Grand
-# Finals" is this table, not the one above it
-cat("\ncombined, both teams, per match - this is what the article quotes:\n")
-t2b <- modern %>%
-  group_by(round_type) %>%
-  summarise(tackles = 2 * mean(tackles),
-            contestedPossessions = 2 * mean(contestedPossessions),
-            .groups = "drop") %>%
-  mutate(across(where(is.numeric), ~round(., 1)))
-print(as.data.frame(t2b))
 
 cat("\n'Rank each September's nine finals': Grand Final's rank on contested",
     "possessions, one season at a time (1 = most contested final that year)\n")
