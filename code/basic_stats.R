@@ -94,6 +94,7 @@ section("2. Which final is the hardest (2012-2025)")
 t2 <- modern %>%
   group_by(round_type) %>%
   summarise(tackles = mean(tackles), contestedPossessions = mean(contestedPossessions),
+            cp_rate = mean(cp_rate, na.rm = TRUE),
             score = mean(score), .groups = "drop") %>%
   mutate(across(where(is.numeric), ~round(., 1)))
 print(as.data.frame(t2))
