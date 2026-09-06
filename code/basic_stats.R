@@ -193,6 +193,32 @@ for (metric in c("tackles", "contestedPossessions")) {
           summarise(gap_pct = round(mean(gap_pct), 1), .groups = "drop")))
 }
 
+# Has the Grand Final itself stayed about the same while the OTHER finals
+# got harder? Same two sources, per-team average, split at 2012 - where the
+# AFL feed begins and where every other era comparison in this script also
+# splits. old (2000-2011) has no totalPossessions column, so cp_rate is
+# derived the same way it's checked elsewhere in this script: contested
+# possessions as a share of contested + uncontested.
+both_teams <- bind_rows(
+  old %>% transmute(season, round_type, is_final, tackles, contestedPossessions,
+                     cp_rate = 100 * contestedPossessions /
+                       (contestedPossessions + uncontestedPossessions)),
+  modern %>% transmute(season, round_type, is_final, tackles, contestedPossessions,
+                        cp_rate)
+) %>%
+  filter(is_final == 1) %>%
+  mutate(era = if_else(season <= 2011, "2000-2011", "2012-2025"),
+         group = if_else(round_type == "Grand Final", "Grand Final", "Other finals"))
+
+cat("\nGrand Final vs the other finals, before and after the AFL feed begins (2012),\n")
+cat("per team, per match:\n")
+print(as.data.frame(both_teams %>%
+  group_by(era, group) %>%
+  summarise(tackles = round(mean(tackles), 1),
+            contestedPossessions = round(mean(contestedPossessions), 1),
+            cp_rate = round(mean(cp_rate, na.rm = TRUE), 1),
+            n = n(), .groups = "drop")))
+
 # --------------------------------------------------------------------------
 section("4. Are they close games? (all 5,111 games, 2000-2025)")
 # one row per game (quarters carries a row per team; a game's two rows are
