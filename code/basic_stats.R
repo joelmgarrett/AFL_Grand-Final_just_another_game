@@ -73,6 +73,11 @@ t1 <- modern %>%
   group_by(round_type) %>%
   summarise(disposals = mean(disposals), kicks = mean(kicks),
             handballs = mean(handballs),
+            # contestedPossessions and uncontestedPossessions are shown
+            # alongside cp_rate so the rate can be checked by hand:
+            # cp_rate = 100 * contestedPossessions / (contestedPossessions
+            # + uncontestedPossessions), give or take the blank 2015 match
+            contestedPossessions = mean(contestedPossessions),
             uncontestedPossessions = mean(uncontestedPossessions),
             cp_rate = mean(cp_rate, na.rm = TRUE), marks = mean(marks),
             uncontestedMarks = mean(uncontestedMarks),
