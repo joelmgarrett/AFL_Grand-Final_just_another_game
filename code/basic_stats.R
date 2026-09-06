@@ -210,7 +210,7 @@ both_teams <- bind_rows(
   mutate(era = if_else(season <= 2011, "2000-2011", "2012-2025"),
          group = if_else(round_type == "Grand Final", "Grand Final", "Other finals"))
 
-cat("\nGrand Final vs the other finals, before and after the AFL feed begins (2012),\n")
+cat("\nGrand Final vs the other finals, before and after the AFL feed begins (2012):\n")
 cat("per team, per match:\n")
 print(as.data.frame(both_teams %>%
   group_by(era, group) %>%
@@ -218,6 +218,40 @@ print(as.data.frame(both_teams %>%
             contestedPossessions = round(mean(contestedPossessions), 1),
             cp_rate = round(mean(cp_rate, na.rm = TRUE), 1),
             n = n(), .groups = "drop")))
+
+# both teams combined - cp_rate is not doubled, same reasoning as section 2
+cat("\nboth teams combined, per match:\n")
+print(as.data.frame(both_teams %>%
+  group_by(era, group) %>%
+  summarise(tackles = round(2 * mean(tackles), 1),
+            contestedPossessions = round(2 * mean(contestedPossessions), 1),
+            cp_rate = round(mean(cp_rate, na.rm = TRUE), 1),
+            n = n(), .groups = "drop")))
+
+# same idea, but broken out by every individual round type rather than
+# collapsed to "Grand Final" vs "Other finals" - this is the section 2
+# table (tackles, contestedPossessions, cp_rate, score, both teams combined)
+# repeated for each era, so the two eras can be compared round type by
+# round type, not just Grand Final vs everything else
+by_round_era <- bind_rows(
+  old %>% transmute(season, round_type, tackles, contestedPossessions, score,
+                     cp_rate = 100 * contestedPossessions /
+                       (contestedPossessions + uncontestedPossessions)),
+  modern %>% transmute(season, round_type, tackles, contestedPossessions, score,
+                        cp_rate)
+) %>%
+  mutate(era = if_else(season <= 2011, "2000-2011", "2012-2025"),
+         round_type = factor(round_type, levels = ORDER))
+
+for (e in c("2000-2011", "2012-2025")) {
+  cat("\n", e, ", both teams combined, per match:\n", sep = "")
+  print(as.data.frame(by_round_era %>% filter(era == e) %>%
+    group_by(round_type) %>%
+    summarise(tackles = round(2 * mean(tackles), 1),
+              contestedPossessions = round(2 * mean(contestedPossessions), 1),
+              cp_rate = round(mean(cp_rate, na.rm = TRUE), 1),
+              score = round(2 * mean(score), 1), .groups = "drop")))
+}
 
 # --------------------------------------------------------------------------
 section("4. Are they close games? (all 5,111 games, 2000-2025)")
