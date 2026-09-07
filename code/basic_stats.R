@@ -14,8 +14,7 @@
 # The two methods give very slightly different answers (contested possession
 # rate this way: 38.6% -> 40.9%; pooled, it is 38.4% -> 40.5%). Averaging each
 # match's own rate is used throughout so every percentage in the piece is
-# computed the same way. This is the same convention basic_stats.py uses; the
-# two scripts should print identical numbers.
+# computed the same way.
 
 suppressPackageStartupMessages({
   library(readxl)
@@ -325,90 +324,3 @@ q <- q %>%
 cat("\naverage margin GROWTH in the final quarter, by group:\n")
 print(as.data.frame(q %>% group_by(group) %>%
         summarise(growth = round(mean(growth), 1), .groups = "drop")))
-
-# --------------------------------------------------------------------------
-section("5. Even the umpiring looks different")
-old <- old %>% mutate(frees_per_100 = 100 * freesFor / disposals)
-modern <- modern %>% mutate(frees_per_100 = 100 * freesFor / disposals)
-
-o_gf <- old %>% filter(round_type == "Grand Final") %>% pull(frees_per_100)
-o_ha <- old %>% filter(round_type == "Home & Away") %>% pull(frees_per_100)
-cat(sprintf("2000-2011: Grand Final %.2f vs Home & Away %.2f frees per 100 disposals\n",
-            mean(o_gf), mean(o_ha)))
-
-m_gf <- modern %>% filter(round_type == "Grand Final") %>% pull(frees_per_100)
-m_of <- modern %>% filter(is_final == 1, round_type != "Grand Final") %>% pull(frees_per_100)
-cat(sprintf("2012-2025: Grand Final %.2f vs other finals %.2f frees per 100 disposals\n",
-            mean(m_gf), mean(m_of)))
-
-# --------------------------------------------------------------------------
-section("6. Methods note: season fixed-effects models behind the round-type claims")
-# The same model, run three ways (2012-2025 only, 2000-2011 only, and the
-# two combined) and on two outcomes (tackles, contested possessions), so the
-# 2012-2025-only result reported before can be checked against the earlier
-# afltables era and against the full 26-season run.
-
-# cluster-robust (by match) standard errors, matching the Python script's
-# statsmodels cov_type="cluster" - implemented directly, no extra package
-cluster_se <- function(fit, cluster) {
-  X <- model.matrix(fit)
-  u <- residuals(fit)
-  clusters <- unique(cluster)
-  meat <- matrix(0, ncol(X), ncol(X))
-  for (cl in clusters) {
-    idx <- which(cluster == cl)
-    Xg <- X[idx, , drop = FALSE]
-    ug <- u[idx]
-    score <- t(Xg) %*% ug
-    meat <- meat + score %*% t(score)
-  }
-  bread <- solve(t(X) %*% X)
-  n <- nrow(X); k <- ncol(X); g <- length(clusters)
-  adj <- (g / (g - 1)) * ((n - 1) / (n - k))
-  vcov <- adj * bread %*% meat %*% bread
-  sqrt(diag(vcov))
-}
-
-run_model <- function(data, outcome, label) {
-  dd <- data %>%
-    filter(!is.na(.data[[outcome]])) %>%
-    mutate(round_type = relevel(factor(round_type, levels = ORDER), ref = "Home & Away"),
-           season = factor(season))
-  fit <- lm(as.formula(paste(outcome, "~ round_type + season")), data = dd)
-  se <- cluster_se(fit, dd$gid)
-  b <- coef(fit)
-  cat("\n", label, ", ", outcome, " vs Home & Away, adjusted for season, ",
-      "SEs clustered by match (n=", nrow(dd), " team-matches):\n", sep = "")
-  for (rt in FINALS) {
-    k <- paste0("round_type", rt)
-    if (k %in% names(b)) {
-      est <- b[[k]]; s <- se[[k]]
-      lo <- est - 1.96 * s; hi <- est + 1.96 * s
-      p <- 2 * pnorm(-abs(est / s))
-      cat(sprintf("  %-20s %+.2f  (95%% CI %+.2f to %+.2f, p=%.4f)\n",
-                  rt, est, lo, hi, p))
-    }
-  }
-}
-
-# gid is the game identifier used for clustering - match_id in the AFL feed,
-# match_url in afltables - unified so the combined 2000-2025 model can
-# cluster on the right thing regardless of which source a row came from
-modern_m <- modern %>% mutate(gid = match_id)
-old_m <- old %>% mutate(gid = match_url)
-combined_m <- bind_rows(
-  old_m %>% select(season, round_type, tackles, contestedPossessions, gid),
-  modern_m %>% select(season, round_type, tackles, contestedPossessions, gid)
-)
-
-for (outcome in c("tackles", "contestedPossessions")) {
-  run_model(modern_m, outcome, "2012-2025")
-  run_model(old_m, outcome, "2000-2011")
-  run_model(combined_m, outcome, "2000-2025, overall")
-}
-
-# Not run split into thirds or five-year windows: with only 8-9 (or 5-6)
-# Grand Finals per slice, the model's confidence intervals get too wide to
-# say anything with confidence - see the descriptive thirds/fifths tables
-# in section 3 instead, which hold up fine on small samples since they are
-# not trying to estimate uncertainty, just show the shape.
