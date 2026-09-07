@@ -299,15 +299,13 @@ cat(sprintf("2012-2025: Grand Final %.2f vs other finals %.2f frees per 100 disp
             mean(m_gf), mean(m_of)))
 
 # --------------------------------------------------------------------------
-section("6. Methods note: season fixed-effects model behind the round-type claims")
-dd <- modern %>%
-  filter(!is.na(tackles)) %>%
-  mutate(round_type = relevel(factor(round_type, levels = ORDER), ref = "Home & Away"),
-         season = factor(season))
+section("6. Methods note: season fixed-effects models behind the round-type claims")
+# The same model, run three ways (2012-2025 only, 2000-2011 only, and the
+# two combined) and on two outcomes (tackles, contested possessions), so the
+# 2012-2025-only result reported before can be checked against the earlier
+# afltables era and against the full 26-season run.
 
-fit <- lm(tackles ~ round_type + season, data = dd)
-
-# cluster-robust (by match_id) standard errors, matching the Python script's
+# cluster-robust (by match) standard errors, matching the Python script's
 # statsmodels cov_type="cluster" - implemented directly, no extra package
 cluster_se <- function(fit, cluster) {
   X <- model.matrix(fit)
@@ -328,17 +326,40 @@ cluster_se <- function(fit, cluster) {
   sqrt(diag(vcov))
 }
 
-se <- cluster_se(fit, dd$match_id)
-b <- coef(fit)
-cat("Tackles by round type vs Home & Away, adjusted for season,",
-    "SEs clustered by match:\n\n")
-for (rt in FINALS) {
-  k <- paste0("round_type", rt)
-  if (k %in% names(b)) {
-    est <- b[[k]]; s <- se[[k]]
-    lo <- est - 1.96 * s; hi <- est + 1.96 * s
-    p <- 2 * pnorm(-abs(est / s))
-    cat(sprintf("  %-20s %+.2f tackles  (95%% CI %+.2f to %+.2f, p=%.4f)\n",
-                rt, est, lo, hi, p))
+run_model <- function(data, outcome, label) {
+  dd <- data %>%
+    filter(!is.na(.data[[outcome]])) %>%
+    mutate(round_type = relevel(factor(round_type, levels = ORDER), ref = "Home & Away"),
+           season = factor(season))
+  fit <- lm(as.formula(paste(outcome, "~ round_type + season")), data = dd)
+  se <- cluster_se(fit, dd$gid)
+  b <- coef(fit)
+  cat("\n", label, ", ", outcome, " vs Home & Away, adjusted for season, ",
+      "SEs clustered by match (n=", nrow(dd), " team-matches):\n", sep = "")
+  for (rt in FINALS) {
+    k <- paste0("round_type", rt)
+    if (k %in% names(b)) {
+      est <- b[[k]]; s <- se[[k]]
+      lo <- est - 1.96 * s; hi <- est + 1.96 * s
+      p <- 2 * pnorm(-abs(est / s))
+      cat(sprintf("  %-20s %+.2f  (95%% CI %+.2f to %+.2f, p=%.4f)\n",
+                  rt, est, lo, hi, p))
+    }
   }
+}
+
+# gid is the game identifier used for clustering - match_id in the AFL feed,
+# match_url in afltables - unified so the combined 2000-2025 model can
+# cluster on the right thing regardless of which source a row came from
+modern_m <- modern %>% mutate(gid = match_id)
+old_m <- old %>% mutate(gid = match_url)
+combined_m <- bind_rows(
+  old_m %>% select(season, round_type, tackles, contestedPossessions, gid),
+  modern_m %>% select(season, round_type, tackles, contestedPossessions, gid)
+)
+
+for (outcome in c("tackles", "contestedPossessions")) {
+  run_model(modern_m, outcome, "2012-2025")
+  run_model(old_m, outcome, "2000-2011")
+  run_model(combined_m, outcome, "2000-2025, overall")
 }
