@@ -274,6 +274,28 @@ print(as.data.frame(thirds %>%
             cp_rate = round(mean(cp_rate, na.rm = TRUE), 1),
             n = n(), .groups = "drop")))
 
+# One more cut, in five-year windows rather than thirds, to see whether the
+# "peak" is really a brief spike around 2009-2013 or a longer plateau. Only
+# 5-6 Grand Finals per window now, so descriptive only - too little data
+# for the regression model to say anything with confidence at this
+# resolution.
+fifths <- both_teams %>%
+  mutate(fifth = case_when(season <= 2005 ~ "2000-2005",
+                            season <= 2010 ~ "2006-2010",
+                            season <= 2015 ~ "2011-2015",
+                            season <= 2020 ~ "2016-2020",
+                            TRUE ~ "2021-2025"))
+cat("\nseasons per fifth:\n")
+print(as.data.frame(fifths %>% distinct(season, fifth) %>% count(fifth)))
+
+cat("\nGrand Final vs the other finals, in five-year windows, both teams combined, per match:\n")
+print(as.data.frame(fifths %>%
+  group_by(fifth, group) %>%
+  summarise(tackles = round(2 * mean(tackles), 1),
+            contestedPossessions = round(2 * mean(contestedPossessions), 1),
+            cp_rate = round(mean(cp_rate, na.rm = TRUE), 1),
+            n = n(), .groups = "drop")))
+
 # --------------------------------------------------------------------------
 section("4. Are they close games? (all 5,111 games, 2000-2025)")
 # one row per game (quarters carries a row per team; a game's two rows are
