@@ -253,6 +253,27 @@ for (e in c("2000-2011", "2012-2025")) {
               score = round(2 * mean(score), 1), .groups = "drop")))
 }
 
+# Splitting into two eras hides any shape within them. Cut the same 26
+# seasons into three roughly-equal thirds instead (~8-9 seasons each) to see
+# whether the Grand Final built up to a peak around 2009-2013 and has since
+# fallen back, rather than just stepping down once in 2012. Small samples
+# here - about 9 Grand Finals per third - so treat this as a shape check,
+# not a precise estimate.
+thirds <- both_teams %>%
+  mutate(third = case_when(season <= 2008 ~ "2000-2008",
+                            season <= 2017 ~ "2009-2017",
+                            TRUE ~ "2018-2025"))
+cat("\nseasons per third:\n")
+print(as.data.frame(thirds %>% distinct(season, third) %>% count(third)))
+
+cat("\nGrand Final vs the other finals, in thirds, both teams combined, per match:\n")
+print(as.data.frame(thirds %>%
+  group_by(third, group) %>%
+  summarise(tackles = round(2 * mean(tackles), 1),
+            contestedPossessions = round(2 * mean(contestedPossessions), 1),
+            cp_rate = round(mean(cp_rate, na.rm = TRUE), 1),
+            n = n(), .groups = "drop")))
+
 # --------------------------------------------------------------------------
 section("4. Are they close games? (all 5,111 games, 2000-2025)")
 # one row per game (quarters carries a row per team; a game's two rows are
@@ -362,4 +383,19 @@ for (outcome in c("tackles", "contestedPossessions")) {
   run_model(modern_m, outcome, "2012-2025")
   run_model(old_m, outcome, "2000-2011")
   run_model(combined_m, outcome, "2000-2025, overall")
+}
+
+# Same model again, but split into thirds rather than two eras, to check
+# whether the Grand Final's advantage built to a peak around 2009-2013 and
+# faded, rather than just stepping down once at 2012. Only ~9 Grand Finals
+# per third, so expect much wider confidence intervals than the two-era
+# version above - this is a shape check, not a precision estimate.
+combined_m <- combined_m %>%
+  mutate(third = case_when(season <= 2008 ~ "2000-2008",
+                            season <= 2017 ~ "2009-2017",
+                            TRUE ~ "2018-2025"))
+for (outcome in c("tackles", "contestedPossessions")) {
+  for (th in c("2000-2008", "2009-2017", "2018-2025")) {
+    run_model(combined_m %>% filter(third == th), outcome, th)
+  }
 }
