@@ -407,17 +407,8 @@ for (outcome in c("tackles", "contestedPossessions")) {
   run_model(combined_m, outcome, "2000-2025, overall")
 }
 
-# Same model again, but split into thirds rather than two eras, to check
-# whether the Grand Final's advantage built to a peak around 2009-2013 and
-# faded, rather than just stepping down once at 2012. Only ~9 Grand Finals
-# per third, so expect much wider confidence intervals than the two-era
-# version above - this is a shape check, not a precision estimate.
-combined_m <- combined_m %>%
-  mutate(third = case_when(season <= 2008 ~ "2000-2008",
-                            season <= 2017 ~ "2009-2017",
-                            TRUE ~ "2018-2025"))
-for (outcome in c("tackles", "contestedPossessions")) {
-  for (th in c("2000-2008", "2009-2017", "2018-2025")) {
-    run_model(combined_m %>% filter(third == th), outcome, th)
-  }
-}
+# Not run split into thirds or five-year windows: with only 8-9 (or 5-6)
+# Grand Finals per slice, the model's confidence intervals get too wide to
+# say anything with confidence - see the descriptive thirds/fifths tables
+# in section 3 instead, which hold up fine on small samples since they are
+# not trying to estimate uncertainty, just show the shape.
