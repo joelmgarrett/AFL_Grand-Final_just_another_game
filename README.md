@@ -10,6 +10,14 @@ We pulled the official statistics for every AFL match played since 2000 to see w
 - **`code/basic_stats.R`** - reproduces every number quoted in the article,
   in the order they appear. Run `install.packages(c("readxl", "dplyr"))`,
   then `Rscript code/basic_stats.R` from the repo root.
+- **`code/verify_sources.R`** - independently scrapes afltables.com for
+  every final 2012-2025 and checks it against the AFL feed data in
+  `data/afl_grand_final_data.xlsx`. This is the source cross-check the
+  article's methods note describes. Run
+  `install.packages(c("rvest", "xml2", "stringr", "dplyr", "readxl"))`,
+  then `Rscript code/verify_sources.R` from the repo root. First run takes
+  a few minutes (126 pages, politely rate-limited); it caches its
+  scrape, so every run after that is instant.
 
 This is a Conversation piece, not a study - a handful of counting stats used to
 spot a trend, not a controlled experiment. Treat it that way.
