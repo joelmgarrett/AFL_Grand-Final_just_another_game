@@ -146,6 +146,26 @@ cat("\nSeasons where GF ranked 1st on contested possessions since 2011: ",
     if (length(top_since_2011) == 0) "none" else paste(top_since_2011, collapse = ", "),
     "\n", sep = "")
 
+# same again on tackles - this is the one the article's "average rank of 5.1
+# of nine" and "most-tackled final of its season four years running, from
+# 2009 to 2012" claims actually refer to (those four years are outside this
+# 2012-2025 sheet; see the "both" data below for the full 2000-2025 version)
+gt <- modern %>%
+  filter(is_final == 1) %>%
+  group_by(season, match_id, round_type) %>%
+  summarise(tackles = sum(tackles), .groups = "drop")
+ranks_tackles <- gt %>%
+  group_by(season) %>%
+  arrange(desc(tackles), .by_group = TRUE) %>%
+  mutate(rank_ = row_number()) %>%
+  filter(round_type == "Grand Final") %>%
+  ungroup() %>%
+  transmute(season, gf_rank = rank_)
+cat("\nGrand Final's rank on tackles, one season at a time (2012-2025):\n")
+print(as.data.frame(ranks_tackles))
+cat("\naverage rank on tackles, 2012-2025:",
+    round(mean(ranks_tackles$gf_rank), 1), "of 9\n")
+
 # --------------------------------------------------------------------------
 section("3. Grand Finals did not always look like this")
 # The article's method: rank the 9 (or 10, in 2010) finals of a season on a
@@ -174,15 +194,21 @@ for (metric in c("tackles", "contestedPossessions")) {
     if (nrow(gfs) == 0) next
     gf_val <- gfs[[metric]][1]
     gf_gid <- gfs$gid[1]
+    gf_rank <- sum(sub[[metric]] > gf_val) + 1  # 1 = highest that season
     rest <- sub %>% filter(!(gid == gf_gid & round_type == "Grand Final"))
     rest_median <- median(rest[[metric]])
     rows[[length(rows) + 1]] <- data.frame(
-      season = s, grand_final = gf_val, other_finals_median = rest_median,
+      season = s, grand_final = gf_val, gf_rank = gf_rank,
+      other_finals_median = rest_median,
       gap_pct = round(100 * (gf_val - rest_median) / rest_median, 1))
   }
   d <- bind_rows(rows)
+  # this is the full 2000-2025 table behind "most-tackled final of its
+  # season four years running, from 2009 to 2012" and "has not led its
+  # series for contested possessions since 2011" - rank 1 = hardest final
+  # of that season
   cat("\n--- ", metric, ": Grand Final vs the median of its own season's other finals ---\n", sep = "")
-  print(d %>% filter(season %in% c(2011, 2015)))
+  print(d)
   d$block <- sapply(d$season, function(y) {
     start <- 2000 + (y - 2000) %/% 2 * 2
     paste0(start, "-", start + 1)
@@ -295,6 +321,17 @@ print(as.data.frame(fifths %>%
             cp_rate = round(mean(cp_rate, na.rm = TRUE), 1),
             n = n(), .groups = "drop")))
 
+# broken out by individual round type rather than pooled "other finals" -
+# this is what "the qualifying final alone still the toughest final" checks
+# against for the most recent window
+cat("\n2021-2025, both teams combined, per match, by round type:\n")
+print(as.data.frame(fifths %>% filter(fifth == "2021-2025") %>%
+  group_by(round_type) %>%
+  summarise(tackles = round(2 * mean(tackles), 1),
+            contestedPossessions = round(2 * mean(contestedPossessions), 1),
+            cp_rate = round(mean(cp_rate, na.rm = TRUE), 1),
+            n = n(), .groups = "drop")))
+
 # --------------------------------------------------------------------------
 section("4. Are they close games? (all 5,111 games, 2000-2025)")
 # one row per game (quarters carries a row per team; a game's two rows are
@@ -321,6 +358,18 @@ q <- q %>%
                             round_type == "Home & Away" ~ "Home & Away",
                             TRUE ~ "Other finals"),
          growth = gap4 - gap3)
+
+# pooled by group at every break - this is what "26.9 points, tighter even
+# than an average home-and-away match (27.7) and about the same as the
+# other finals rounds (27.1)" checks against; the by-round-type table above
+# only breaks out the five individual finals rounds, not this pooled view
+cat("\nmargin at every break, pooled by group:\n")
+print(as.data.frame(q %>% group_by(group) %>%
+        summarise(`Quarter time` = round(mean(gap1), 1),
+                  `Half time` = round(mean(gap2), 1),
+                  `Three-qtr time` = round(mean(gap3), 1),
+                  `Full time` = round(mean(gap4), 1), .groups = "drop")))
+
 cat("\naverage margin GROWTH in the final quarter, by group:\n")
 print(as.data.frame(q %>% group_by(group) %>%
         summarise(growth = round(mean(growth), 1), .groups = "drop")))
