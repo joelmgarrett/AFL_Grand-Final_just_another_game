@@ -346,7 +346,7 @@ by_round <- q %>%
   group_by(round_type) %>%
   summarise(`Quarter time` = round(mean(gap1), 1), `Half time` = round(mean(gap2), 1),
             `Three-qtr time` = round(mean(gap3), 1), `Full time` = round(mean(gap4), 1),
-            pct_within_2_goals = round(100 * mean(gap4 <= 12), 1), .groups = "drop")
+            .groups = "drop")
 print(as.data.frame(by_round))
 
 gf <- q %>% filter(round_type == "Grand Final")
@@ -373,3 +373,23 @@ print(as.data.frame(q %>% group_by(group) %>%
 cat("\naverage margin GROWTH in the final quarter, by group:\n")
 print(as.data.frame(q %>% group_by(group) %>%
         summarise(growth = round(mean(growth), 1), .groups = "drop")))
+
+# "A third of them, 33.3%, have been decided by 50 points or more, compared
+# with 23.1% of other finals and 24.8% of home-and-away games"
+cat("\n% of games decided by 50 points or more, by group:\n")
+print(as.data.frame(q %>% group_by(group) %>%
+        summarise(n = n(), pct_50_plus = round(100 * mean(gap4 >= 50), 1),
+                  .groups = "drop")))
+
+# "the team ahead at three-quarter time goes on to win 92.6% of Grand
+# Finals, compared with 84.6% of other finals and 86.7% of home-and-away
+# games" - uses the SIGNED lead (not the absolute gap above) so the team in
+# front at three-quarter time can be compared with the team in front at full
+# time; a score tied at three-quarter time (lead3 == 0, very rare) counts as
+# "held", since there's no lead yet to lose
+cat("\nhow often the team ahead at three-quarter time goes on to win, by group:\n")
+print(as.data.frame(q %>%
+        mutate(held_lead = sign(lead_after_q3) == sign(lead_after_q4) | lead_after_q3 == 0) %>%
+        group_by(group) %>%
+        summarise(n = n(), pct_held_lead = round(100 * mean(held_lead), 1),
+                  .groups = "drop")))
