@@ -381,15 +381,39 @@ print(as.data.frame(q %>% group_by(group) %>%
         summarise(n = n(), pct_50_plus = round(100 * mean(gap4 >= 50), 1),
                   .groups = "drop")))
 
+# Who actually won. lead_after_q4 is the margin at the final siren, which
+# misses extra time: the 2007 semi-final and 2017 elimination final were
+# level at the siren and decided in extra time. `score` includes extra time,
+# so the real result is this team's score minus the opponent's.
+q <- q %>%
+  left_join(quarters %>% select(game_code, team, opp_final = score),
+            by = c("game_code", "opponent" = "team")) %>%
+  mutate(result = score - opp_final)
+
 # "the team ahead at three-quarter time goes on to win 92.6% of Grand
 # Finals, compared with 84.6% of other finals and 86.7% of home-and-away
-# games" - uses the SIGNED lead (not the absolute gap above) so the team in
-# front at three-quarter time can be compared with the team in front at full
-# time; a score tied at three-quarter time (lead3 == 0, very rare) counts as
-# "held", since there's no lead yet to lose
+# games". Kept simple: the rare game level at three-quarter time counts as
+# "held". The article's 84.6% for other finals used the siren score; scored
+# by the actual result (the two extra-time finals above) it is 85.1%. Grand
+# finals and home-and-away are unchanged.
 cat("\nhow often the team ahead at three-quarter time goes on to win, by group:\n")
 print(as.data.frame(q %>%
-        mutate(held_lead = sign(lead_after_q3) == sign(lead_after_q4) | lead_after_q3 == 0) %>%
+        mutate(held_lead = lead_after_q3 == 0 | sign(lead_after_q3) == sign(result)) %>%
         group_by(group) %>%
         summarise(n = n(), pct_held_lead = round(100 * mean(held_lead), 1),
+                  .groups = "drop")))
+
+# Not in the article - the follow-up table posted alongside it: in finals,
+# how often the side leading at three-quarter time wins, by size of lead.
+# Games level at three-quarter time are left out (no leader); extra-time
+# results count; the one drawn final (2010 Grand Final) counts as not a win.
+cat("\nfinals only: side leading at three-quarter time wins, by size of lead\n")
+lead_bands <- q %>%
+  filter(group != "Home & Away", lead_after_q3 != 0) %>%
+  mutate(lead = abs(lead_after_q3),
+         band = cut(lead, c(0, 10, 20, 30, Inf), labels = c("1-10", "11-20", "21-30", "31+")),
+         won = sign(lead_after_q3) == sign(result))
+print(as.data.frame(lead_bands %>% group_by(band) %>%
+        summarise(games = n(), wins = sum(won), pct_won = round(100 * mean(won), 1),
+                  gf_games = sum(group == "Grand Final"), gf_wins = sum(won & group == "Grand Final"),
                   .groups = "drop")))
